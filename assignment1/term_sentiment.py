@@ -30,13 +30,14 @@ def gettweettexts(fp):
     return tweets
 
 
-def calcSentiment(tweets, dict):
-    scores = []
+def calcSentiment(tweets, dic):
     newTokensDict = {}
-    temp = []
     for text in tweets:
         tokens = text.split()
-        sent_score = 0
+        positives=0
+        negatives=0
+        count=1
+        temp=[]
         for token in tokens:
             # CLEANUP punctuations
             cleanToken = token.lstrip(string.punctuation)
@@ -45,42 +46,36 @@ def calcSentiment(tweets, dict):
             if cleanToken == "":
                 continue
             # cleanToken=cleanToken.strip()
-            if cleanToken in dict:
-                sent_score = sent_score + dict[cleanToken]
+            if cleanToken in dic:
+                if dic[cleanToken] > 0:
+                    positives += 1
+                    count +=1
+                else:
+                    negatives += 1
+                    count+=1
             else:
                 temp.append(cleanToken)
 
-        scores.append(sent_score)
-        for cleanToken in temp:
-            if cleanToken in newTokensDict:
-                # update the list of scores
-                tempList = []
-                tempList = newTokensDict[cleanToken]
-                tempList.append(sent_score)
-                newTokensDict.update({cleanToken: tempList})
-                # print "updating existing token in dict: clean Token: "+ cleanToken + str(newTokensDict[cleanToken])
+        #go over all of the new terms and add them to the new dict
+        for newTerm in temp:
+            if newTerm in newTokensDict:
+                #update its count
+                currentScore=newTokensDict[newTerm]
+                newScore=float(currentScore + (float(positives-negatives)/float(count))) * 0.5
+                newTokensDict.update({newTerm:newScore})
             else:
-                # add this token to the dictionary
-                tempList = [sent_score]
-                newTokensDict[cleanToken] = tempList
-                # print "adding new token to Dict:  clean token: " + cleanToken
+                #add this new term
+                newTokensDict[newTerm]=float(positives-negatives)/float(count)
 
-    return scores, newTokensDict
+
+
+    return newTokensDict
 
 
 def printNewSentimentScores(dict):
     # print len(dict)
-    for token, scores in dict.iteritems():
-        positives = float(len([x for x in scores if x > 0]))
-        negatives = float(len([x for x in scores if x < 0]))
-        if positives + negatives == 0:
-            sentiment = 0
-        else:
-            sentiment = 5 * ((positives - negatives) / (positives + negatives))
-        # print str(token)+"\tpositives\t" + str(positives) + "\tnegatives\t" + str(negatives) + "\tsentiment\t" + str(sentiment)
-        #if negatives>positives:
-        #print "\nfound one\t********************************"
-        print token + " " + str(sentiment)
+    for token, score in dict.iteritems():
+        print token + " " + str(score)
 
 
 def main():
@@ -91,7 +86,7 @@ def main():
     tweets = gettweettexts(sys.argv[2])
 
     # calculate the sentiment per tweet and get back the new Terms Dictionary
-    sentiment_scores, newTokensDict = calcSentiment(tweets, dic)
+    newTokensDict = calcSentiment(tweets, dic)
 
     #calculate and print the new Sentiment scores for new terms
     printNewSentimentScores(newTokensDict)
